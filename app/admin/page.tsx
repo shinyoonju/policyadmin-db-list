@@ -30,7 +30,12 @@ export default async function AdminPage() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-8 rounded-3xl bg-slate-950 p-8 text-white">
-        <p className="text-sm text-slate-300">Admin</p>
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-slate-300">Admin</p>
+          <form action="/api/admin/logout" method="post">
+            <button type="submit" className="rounded-full bg-white/10 px-4 py-2 text-xs font-bold text-white transition hover:bg-white/20">로그아웃</button>
+          </form>
+        </div>
         <h1 className="mt-2 text-3xl font-bold">관리자 대시보드</h1>
         <p className="mt-3 text-slate-300">
           정책 등록, 수정, 검수 결과, 검색/메뉴 로그를 관리합니다.

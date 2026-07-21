@@ -3,10 +3,15 @@ import { TrackedLink } from '@/components/TrackedLink';
 import { PolicyCard } from '@/components/PolicyCard';
 import { JsonLd } from '@/components/JsonLd';
 import { ArticleSlider } from '@/components/ArticleSlider';
-import { policies } from '@/data/policies';
 import { siteConfig } from '@/lib/site';
+import { listPublishedArticles } from '@/lib/article-store';
+import { listPublicPolicies } from '@/lib/policy-store';
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [policies, articles] = await Promise.all([
+    listPublicPolicies(),
+    listPublishedArticles()
+  ]);
   const popularPolicies = policies.slice(0, 3);
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -85,7 +90,7 @@ export default function HomePage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-16">
-        <ArticleSlider />
+        <ArticleSlider articles={articles} />
       </section>
     </main>
   );

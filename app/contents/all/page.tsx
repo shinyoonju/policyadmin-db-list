@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { articles } from '@/data/articles';
+import { listPublishedArticles } from '@/lib/article-store';
 
 export const metadata: Metadata = {
   title: '정부지원금 정보글 전체 목록',
   description: '청년 지원금, 근로장려금, 소상공인 정책자금 정보글 전체 목록입니다.'
 };
 
-export default function AllContentsPage() {
+export default async function AllContentsPage() {
+  const articles = await listPublishedArticles();
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
       <section className="rounded-[2rem] bg-white p-6 shadow-sm md:p-8">

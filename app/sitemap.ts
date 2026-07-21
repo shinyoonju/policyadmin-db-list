@@ -1,10 +1,11 @@
 import type { MetadataRoute } from 'next';
-import { articles } from '@/data/articles';
+import { listPublishedArticles } from '@/lib/article-store';
 import { siteConfig } from '@/lib/site';
 import { listPublicPolicies } from '@/lib/policy-store';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const policies = await listPublicPolicies();
+  const articles = await listPublishedArticles();
 
   const staticPages = ['', '/policies', '/contents', '/contents/all'].map((path) => ({
     url: `${siteConfig.url}${path}`,

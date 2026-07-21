@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { articles, getArticleBySlug } from '@/data/articles';
+import { articles } from '@/data/articles';
+import { getPublishedArticleBySlug } from '@/lib/article-store';
 import { JsonLd } from '@/components/JsonLd';
 import { siteConfig } from '@/lib/site';
 
@@ -9,8 +10,8 @@ export function generateStaticParams() {
   return articles.map((article) => ({ slug: article.slug }));
 }
 
-export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
-  const article = getArticleBySlug(params.slug);
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const article = await getPublishedArticleBySlug(params.slug);
   if (!article) return {};
 
   return {
@@ -29,8 +30,8 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
   };
 }
 
-export default function ContentDetailPage({ params }: { params: { slug: string } }) {
-  const article = getArticleBySlug(params.slug);
+export default async function ContentDetailPage({ params }: { params: { slug: string } }) {
+  const article = await getPublishedArticleBySlug(params.slug);
   if (!article) notFound();
 
   const jsonLd = {

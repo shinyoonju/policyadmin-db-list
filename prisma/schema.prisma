@@ -59,6 +59,9 @@ model PolicyCheck {
   checkStatus String
   reasons     Json
   diffSummary String?
+  sourceHash   String?
+  oldSnapshot String?  @db.Text
+  newSnapshot String?  @db.Text
   checkedAt   DateTime @default(now())
   reviewedAt  DateTime?
   reviewerStatus String?

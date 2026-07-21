@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { MenuClickLog, PolicyCheckLog, readLogs, SearchLog } from '@/lib/logger';
+import { isDbEnabled, prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,10 +9,55 @@ export const metadata: Metadata = {
   description: '정책 검수 결과, 검색 로그, 메뉴 클릭 로그를 확인합니다.'
 };
 
-export default function AdminReviewsPage() {
-  const policyChecks = readLogs<PolicyCheckLog>('policy-checks').slice(0, 50);
-  const searchLogs = readLogs<SearchLog>('search-logs').slice(0, 50);
-  const menuClicks = readLogs<MenuClickLog>('menu-clicks').slice(0, 50);
+export default async function AdminReviewsPage() {
+  let policyChecks = readLogs<PolicyCheckLog>('policy-checks').slice(0, 50);
+  let searchLogs = readLogs<SearchLog>('search-logs').slice(0, 50);
+  let menuClicks = readLogs<MenuClickLog>('menu-clicks').slice(0, 50);
+
+  if (isDbEnabled()) {
+    const [dbChecks, dbSearchLogs, dbMenuClicks] = await Promise.all([
+      prisma.policyCheck.findMany({ orderBy: { checkedAt: 'desc' }, take: 50 }),
+      prisma.searchLog.findMany({ orderBy: { createdAt: 'desc' }, take: 50 }),
+      prisma.menuClickLog.findMany({ orderBy: { createdAt: 'desc' }, take: 50 })
+    ]);
+
+    policyChecks = dbChecks.map((item) => ({
+      type: 'POLICY_CHECK',
+      policyId: item.policyId,
+      title: item.title,
+      category: '',
+      region: '',
+      officialUrl: item.officialUrl,
+      httpStatus: item.httpStatus,
+      checkStatus: item.checkStatus as PolicyCheckLog['checkStatus'],
+      reasons: Array.isArray(item.reasons) ? item.reasons.map(String) : [],
+      sourceHash: item.sourceHash,
+      oldSnapshot: item.oldSnapshot,
+      newSnapshot: item.newSnapshot,
+      diffSummary: item.diffSummary,
+      checkedAt: item.checkedAt.toISOString()
+    }));
+    searchLogs = dbSearchLogs.map((item) => ({
+      type: 'SEARCH',
+      query: item.query,
+      category: item.category,
+      region: item.region,
+      resultCount: item.resultCount,
+      path: item.path || undefined,
+      userAgent: item.userAgent,
+      ip: item.ip,
+      createdAt: item.createdAt.toISOString()
+    }));
+    menuClicks = dbMenuClicks.map((item) => ({
+      type: 'MENU_CLICK',
+      label: item.label,
+      href: item.href,
+      path: item.path || undefined,
+      userAgent: item.userAgent,
+      ip: item.ip,
+      createdAt: item.createdAt.toISOString()
+    }));
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
@@ -19,8 +65,9 @@ export default function AdminReviewsPage() {
         <p className="text-sm font-black text-brand">ADMIN</p>
         <h1 className="mt-2 text-4xl font-black">검수 결과·사용자 로그</h1>
         <p className="mt-3 text-slate-600">
-          로컬 개발 환경에서는 <code className="rounded bg-soft px-1">.logs</code> 폴더에 JSONL 파일로 저장됩니다.
-          Vercel 운영 환경에서는 Supabase 저장 방식으로 전환하는 것을 권장합니다.
+          {isDbEnabled()
+            ? '현재 Supabase DB에 저장된 검수 결과와 사용자 로그를 표시합니다.'
+            : <>현재 샘플 모드이며 <code className="rounded bg-soft px-1">.logs</code> 폴더의 개발용 기록을 표시합니다.</>}
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <a href="/api/cron/verify-policies" target="_blank" className="rounded-2xl bg-brand px-5 py-3 text-sm font-bold text-white">
@@ -51,7 +98,7 @@ export default function AdminReviewsPage() {
                   <td className="py-3 font-bold">{item.checkStatus}</td>
                   <td>{item.title}</td>
                   <td>{item.httpStatus ?? '-'}</td>
-                  <td>{item.reasons.length ? item.reasons.join(', ') : '정상'}</td>
+                  <td>{item.diffSummary || (item.reasons.length ? item.reasons.join(', ') : '정상')}</td>
                   <td>{new Date(item.checkedAt).toLocaleString('ko-KR')}</td>
                 </tr>
               ))}

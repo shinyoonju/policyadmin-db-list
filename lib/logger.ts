@@ -35,8 +35,12 @@ export type PolicyCheckLog = {
   region: string;
   officialUrl: string;
   httpStatus: number | null;
-  checkStatus: 'OK' | 'NEED_REVIEW' | 'ERROR';
+  checkStatus: 'OK' | 'NEED_REVIEW' | 'SOURCE_CHANGED' | 'LINK_ERROR' | 'EXPIRED' | 'ERROR';
   reasons: string[];
+  sourceHash?: string | null;
+  oldSnapshot?: string | null;
+  newSnapshot?: string | null;
+  diffSummary?: string | null;
   checkedAt: string;
 };
 

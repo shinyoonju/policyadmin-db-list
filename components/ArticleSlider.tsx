@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { articles } from '@/data/articles';
+import type { Article } from '@/data/articles';
 import { TrackedLink } from '@/components/TrackedLink';
 
-export function ArticleSlider() {
+export function ArticleSlider({ articles }: { articles: Article[] }) {
   const sliderRef = useRef<HTMLDivElement>(null);
   const startTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoPlayRef = useRef<ReturnType<typeof setInterval> | null>(null);
