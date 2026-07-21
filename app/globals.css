@@ -8,8 +8,8 @@
 
 body {
   margin: 0;
-  background: #f8fafc;
-  color: #111827;
+  background: #f7fbff;
+  color: #102a43;
 }
 
 a {
@@ -50,6 +50,11 @@ a {
   50% { transform: translateY(-4px); }
 }
 
+@keyframes owl-bob {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-10px) rotate(1deg); }
+}
+
 .hero-reveal {
   opacity: 0;
   animation: hero-reveal 700ms cubic-bezier(.2,.8,.2,1) forwards;
@@ -71,6 +76,11 @@ a {
 .keyword-delay-4 { animation-delay: 660ms; }
 .keyword-delay-5 { animation-delay: 880ms; }
 
+.owl-mascot {
+  animation: owl-bob 4.5s ease-in-out infinite;
+  transform-origin: 55% 90%;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hero-reveal,
   .hero-keyword-card,
@@ -78,6 +88,10 @@ a {
     animation: none;
     opacity: 1;
     transform: none;
+  }
+
+  .owl-mascot {
+    animation: none;
   }
 
   .article-slider {

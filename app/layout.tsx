@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import { TrackedLink } from '@/components/TrackedLink';
 import './globals.css';
 import { siteConfig } from '@/lib/site';
@@ -37,10 +38,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen font-sans">
         <header className="sticky top-0 z-20 border-b border-line bg-white/90 backdrop-blur">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-            <TrackedLink href="/" label="로고" className="text-xl font-black text-ink">정책머니</TrackedLink>
-            <nav className="flex gap-4 text-sm font-semibold text-slate-600">
-              <TrackedLink href="/policies" label="상단메뉴_정책찾기">정책찾기</TrackedLink>
-              <TrackedLink href="/contents" label="상단메뉴_정보글">정보글</TrackedLink>
+            <TrackedLink href="/" label="로고" className="flex items-center gap-2.5 text-xl font-black text-ink">
+              <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-sky-50">
+                <Image src="/images/policy-owl-mascot.png" alt="" width={38} height={38} className="object-contain" />
+              </span>
+              정책머니
+            </TrackedLink>
+            <nav className="flex items-center gap-2 text-sm font-bold text-slate-600">
+              <TrackedLink href="/policies" label="상단메뉴_정책찾기" className="rounded-full px-4 py-2 transition hover:bg-soft hover:text-brand">정책찾기</TrackedLink>
+              <TrackedLink href="/contents" label="상단메뉴_정보글" className="rounded-full px-4 py-2 transition hover:bg-soft hover:text-brand">정보글</TrackedLink>
             </nav>
           </div>
         </header>
