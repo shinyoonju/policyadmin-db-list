@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: #111827;
+}
+
+a {
+  text-decoration: none;
+}
+
+.ad-box {
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+  color: #64748b;
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.article-slider {
+  scrollbar-width: none;
+  overscroll-behavior-inline: contain;
+}
+
+.article-slider::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes hero-reveal {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes card-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes keyword-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.hero-reveal {
+  opacity: 0;
+  animation: hero-reveal 700ms cubic-bezier(.2,.8,.2,1) forwards;
+}
+
+.hero-delay-1 { animation-delay: 100ms; }
+.hero-delay-2 { animation-delay: 200ms; }
+.hero-delay-3 { animation-delay: 300ms; }
+
+.hero-keyword-card {
+  animation: hero-reveal 700ms 180ms cubic-bezier(.2,.8,.2,1) both,
+             card-float 5s 1s ease-in-out infinite;
+}
+
+.keyword-float { animation: keyword-float 3s ease-in-out infinite; }
+.keyword-delay-1 { animation-delay: 0ms; }
+.keyword-delay-2 { animation-delay: 220ms; }
+.keyword-delay-3 { animation-delay: 440ms; }
+.keyword-delay-4 { animation-delay: 660ms; }
+.keyword-delay-5 { animation-delay: 880ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-reveal,
+  .hero-keyword-card,
+  .keyword-float {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .article-slider {
+    scroll-behavior: auto;
+  }
+}

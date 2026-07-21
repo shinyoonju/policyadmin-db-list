@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Policy {
+  id          String   @id
+  title       String
+  category    String
+  region      String
+  amount      String
+  deadline    String
+  summary     String
+  target      String[] @default([])
+  documents   String[] @default([])
+  applyUrl    String
+  keywords    String[] @default([])
+  sourceName  String?
+  isActive    Boolean  @default(true)
+  reviewStatus String  @default("PENDING")
+  lastCheckedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  checks PolicyCheck[]
+
+  @@index([category])
+  @@index([region])
+  @@index([reviewStatus])
+  @@index([isActive])
+}
+
+model Article {
+  slug        String   @id
+  title       String
+  description String
+  category    String
+  sections    Json
+  keywords    String[] @default([])
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([isPublished])
+}
+
+model PolicyCheck {
+  id          String   @id @default(cuid())
+  policyId    String
+  title       String
+  officialUrl String
+  httpStatus  Int?
+  checkStatus String
+  reasons     Json
+  diffSummary String?
+  checkedAt   DateTime @default(now())
+  reviewedAt  DateTime?
+  reviewerStatus String?
+
+  policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@index([policyId])
+  @@index([checkStatus])
+  @@index([checkedAt])
+}
+
+model SearchLog {
+  id          String   @id @default(cuid())
+  query       String
+  category    String
+  region      String
+  resultCount Int
+  path        String?
+  userAgent   String?
+  ip          String?
+  createdAt   DateTime @default(now())
+
+  @@index([query])
+  @@index([createdAt])
+}
+
+model MenuClickLog {
+  id        String   @id @default(cuid())
+  label     String
+  href      String
+  path      String?
+  userAgent String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([label])
+  @@index([createdAt])
+}
