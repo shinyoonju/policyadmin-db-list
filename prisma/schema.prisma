@@ -100,3 +100,31 @@ model MenuClickLog {
   @@index([label])
   @@index([createdAt])
 }
+
+model QnaQuestion {
+  id        String      @id @default(cuid())
+  nickname  String
+  title     String
+  content   String      @db.Text
+  category  String      @default("정책문의")
+  isVisible Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  answers   QnaAnswer[]
+
+  @@index([createdAt])
+  @@index([isVisible])
+}
+
+model QnaAnswer {
+  id         String      @id @default(cuid())
+  questionId String
+  nickname   String
+  content    String      @db.Text
+  isVisible  Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  question   QnaQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+  @@index([createdAt])
+}

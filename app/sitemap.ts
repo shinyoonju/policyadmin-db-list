@@ -2,12 +2,13 @@ import type { MetadataRoute } from 'next';
 import { listPublishedArticles } from '@/lib/article-store';
 import { siteConfig } from '@/lib/site';
 import { listPublicPolicies } from '@/lib/policy-store';
+import { guides } from '@/data/guides';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const policies = await listPublicPolicies();
   const articles = await listPublishedArticles();
 
-  const staticPages = ['', '/policies', '/contents', '/contents/all'].map((path) => ({
+  const staticPages = ['', '/policies', '/contents', '/contents/all', '/guides', '/qna'].map((path) => ({
     url: `${siteConfig.url}${path}`,
     lastModified: new Date(),
     changeFrequency: 'daily' as const,
@@ -28,5 +29,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.85
   }));
 
-  return [...staticPages, ...policyPages, ...articlePages];
+  const guidePages = guides.map((guide) => ({
+    url: `${siteConfig.url}/guides/${guide.slug}`,
+    lastModified: new Date(),
+    changeFrequency: 'monthly' as const,
+    priority: 0.9
+  }));
+
+  return [...staticPages, ...policyPages, ...articlePages, ...guidePages];
 }
