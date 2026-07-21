@@ -28,6 +28,7 @@ export type SearchLog = {
 };
 
 export type PolicyCheckLog = {
+  id?: string;
   type: 'POLICY_CHECK';
   policyId: string;
   title: string;
@@ -41,6 +42,7 @@ export type PolicyCheckLog = {
   oldSnapshot?: string | null;
   newSnapshot?: string | null;
   diffSummary?: string | null;
+  reviewerStatus?: string | null;
   checkedAt: string;
 };
 

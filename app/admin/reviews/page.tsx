@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { MenuClickLog, PolicyCheckLog, readLogs, SearchLog } from '@/lib/logger';
 import { isDbEnabled, prisma } from '@/lib/prisma';
+import { ReviewActions } from '@/components/ReviewActions';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +23,7 @@ export default async function AdminReviewsPage() {
     ]);
 
     policyChecks = dbChecks.map((item) => ({
+      id: item.id,
       type: 'POLICY_CHECK',
       policyId: item.policyId,
       title: item.title,
@@ -35,6 +37,7 @@ export default async function AdminReviewsPage() {
       oldSnapshot: item.oldSnapshot,
       newSnapshot: item.newSnapshot,
       diffSummary: item.diffSummary,
+      reviewerStatus: item.reviewerStatus,
       checkedAt: item.checkedAt.toISOString()
     }));
     searchLogs = dbSearchLogs.map((item) => ({
@@ -86,13 +89,15 @@ export default async function AdminReviewsPage() {
       <section className="mt-8 rounded-[2rem] bg-white p-6 shadow-sm md:p-8">
         <h2 className="text-2xl font-black">정책 자동 검수 최근 50건</h2>
         <div className="mt-5 overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left text-sm">
+          <table className="w-full min-w-[1180px] text-left text-sm">
             <thead className="border-b border-line text-slate-500">
               <tr>
                 <th className="py-3">상태</th>
                 <th>정책명</th>
                 <th>HTTP</th>
                 <th>검수 사유</th>
+                <th>검토 상태</th>
+                <th>작업</th>
                 <th>검수 시간</th>
               </tr>
             </thead>
@@ -103,6 +108,14 @@ export default async function AdminReviewsPage() {
                   <td>{item.title}</td>
                   <td>{item.httpStatus ?? '-'}</td>
                   <td>{item.diffSummary || (item.reasons.length ? item.reasons.join(', ') : '정상')}</td>
+                  <td className="font-bold">{item.reviewerStatus || '검토 대기'}</td>
+                  <td className="py-3">
+                    {item.id ? (
+                      <ReviewActions checkId={item.id} policyId={item.policyId} currentStatus={item.reviewerStatus} />
+                    ) : (
+                      <span className="text-xs text-slate-400">DB 연결 필요</span>
+                    )}
+                  </td>
                   <td>{new Date(item.checkedAt).toLocaleString('ko-KR')}</td>
                 </tr>
               ))}
