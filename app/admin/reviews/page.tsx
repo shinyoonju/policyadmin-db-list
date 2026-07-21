@@ -10,9 +10,9 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminReviewsPage() {
-  let policyChecks = readLogs<PolicyCheckLog>('policy-checks').slice(0, 50);
-  let searchLogs = readLogs<SearchLog>('search-logs').slice(0, 50);
-  let menuClicks = readLogs<MenuClickLog>('menu-clicks').slice(0, 50);
+  let policyChecks: PolicyCheckLog[] = [];
+  let searchLogs: SearchLog[] = [];
+  let menuClicks: MenuClickLog[] = [];
 
   if (isDbEnabled()) {
     const [dbChecks, dbSearchLogs, dbMenuClicks] = await Promise.all([
@@ -57,6 +57,10 @@ export default async function AdminReviewsPage() {
       ip: item.ip,
       createdAt: item.createdAt.toISOString()
     }));
+  } else {
+    policyChecks = readLogs<PolicyCheckLog>('policy-checks').slice(0, 50);
+    searchLogs = readLogs<SearchLog>('search-logs').slice(0, 50);
+    menuClicks = readLogs<MenuClickLog>('menu-clicks').slice(0, 50);
   }
 
   return (
