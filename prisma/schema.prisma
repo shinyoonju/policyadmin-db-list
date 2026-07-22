@@ -21,6 +21,18 @@ model Policy {
   applyUrl    String
   keywords    String[] @default([])
   sourceName  String?
+  externalSourceId String?
+  ministry    String?
+  department  String?
+  contact     String?
+  lifeCycles  String[] @default([])
+  themes      String[] @default([])
+  householdTypes String[] @default([])
+  supportCycle String?
+  provisionType String?
+  onlineApplyAvailable Boolean?
+  sourceRegisteredAt String?
+  viewCount   Int?
   isActive    Boolean  @default(true)
   reviewStatus String  @default("PENDING")
   lastCheckedAt DateTime?
@@ -33,6 +45,7 @@ model Policy {
   @@index([region])
   @@index([reviewStatus])
   @@index([isActive])
+  @@index([externalSourceId])
 }
 
 model Article {
