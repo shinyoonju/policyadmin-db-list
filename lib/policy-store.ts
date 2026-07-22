@@ -29,13 +29,19 @@ export async function listPublicPolicies() {
     externalSourceId: row.externalSourceId,
     sourceRegisteredAt: row.sourceRegisteredAt,
     viewCount: row.viewCount
+    ,selectionCriteria: row.selectionCriteria,
+    supportDetails: row.supportDetails,
+    applicationMethod: row.applicationMethod,
+    additionalInfo: row.additionalInfo,
+    detailStatus: row.detailStatus,
+    detailCheckedAt: row.detailCheckedAt
   }));
 }
 
 export async function getPublicPolicyById(id: string) {
   if (!isDbEnabled()) {
     const policy = samplePolicies.find((item) => item.id === id);
-    return policy ? { ...policy, ministry: null, department: null, contact: null, lifeCycles: [], themes: [], householdTypes: [], supportCycle: null, provisionType: null, onlineApplyAvailable: null, sourceName: null, externalSourceId: null, sourceRegisteredAt: null, viewCount: null } : null;
+    return policy ? { ...policy, ministry: null, department: null, contact: null, lifeCycles: [], themes: [], householdTypes: [], supportCycle: null, provisionType: null, onlineApplyAvailable: null, sourceName: null, externalSourceId: null, sourceRegisteredAt: null, viewCount: null, selectionCriteria: null, supportDetails: null, applicationMethod: null, additionalInfo: null, detailStatus: 'SAMPLE', detailCheckedAt: null } : null;
   }
   const row = await prisma.policy.findFirst({ where: { id, isActive: true } });
   if (!row) return null;
@@ -63,6 +69,12 @@ export async function getPublicPolicyById(id: string) {
     sourceName: row.sourceName,
     externalSourceId: row.externalSourceId,
     sourceRegisteredAt: row.sourceRegisteredAt,
-    viewCount: row.viewCount
+    viewCount: row.viewCount,
+    selectionCriteria: row.selectionCriteria,
+    supportDetails: row.supportDetails,
+    applicationMethod: row.applicationMethod,
+    additionalInfo: row.additionalInfo,
+    detailStatus: row.detailStatus,
+    detailCheckedAt: row.detailCheckedAt
   };
 }

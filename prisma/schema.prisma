@@ -33,6 +33,14 @@ model Policy {
   onlineApplyAvailable Boolean?
   sourceRegisteredAt String?
   viewCount   Int?
+  selectionCriteria String? @db.Text
+  supportDetails String? @db.Text
+  applicationMethod String? @db.Text
+  additionalInfo String? @db.Text
+  detailStatus String @default("PENDING")
+  detailHash String?
+  detailCheckedAt DateTime?
+  detailRetryCount Int @default(0)
   isActive    Boolean  @default(true)
   reviewStatus String  @default("PENDING")
   lastCheckedAt DateTime?
@@ -46,6 +54,8 @@ model Policy {
   @@index([reviewStatus])
   @@index([isActive])
   @@index([externalSourceId])
+  @@index([detailStatus])
+  @@index([detailCheckedAt])
 }
 
 model Article {

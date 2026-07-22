@@ -27,7 +27,7 @@ export async function PATCH(request: Request) {
     });
     for (const check of checks) {
       const pendingChange = pendingChangeFromSnapshot(check.newSnapshot);
-      await tx.policy.update({ where: { id: check.policyId }, data: pendingChange?.kind === 'IMPORT' ? { ...pendingChange.policy, isActive: true, reviewStatus: 'APPROVED', lastCheckedAt: now } : pendingChange?.kind === 'MISSING' ? { isActive: false, reviewStatus: 'EXPIRED', lastCheckedAt: now } : { reviewStatus: 'APPROVED' } });
+      await tx.policy.update({ where: { id: check.policyId }, data: pendingChange?.kind === 'IMPORT' ? { ...pendingChange.policy, isActive: true, reviewStatus: 'APPROVED', lastCheckedAt: now } : pendingChange?.kind === 'MISSING' ? { isActive: false, reviewStatus: 'EXPIRED', lastCheckedAt: now } : pendingChange?.kind === 'DETAIL' ? { ...pendingChange.detail, detailHash: pendingChange.detailHash, detailStatus: 'COMPLETE', detailCheckedAt: now, detailRetryCount: 0, reviewStatus: 'APPROVED' } : { reviewStatus: 'APPROVED' } });
     }
   });
 

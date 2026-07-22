@@ -11,6 +11,17 @@ const comparable = (policy: { id: string; title: string; category: string; regio
 const categoryFrom = (value: string) => { if (/주거|040/.test(value)) return '주거'; if (/일자리|050/.test(value)) return '취업'; if (/임신|출산|보육|080|090/.test(value)) return '출산·육아'; if (/교육|100/.test(value)) return '교육'; if (/금융|130/.test(value)) return '생활'; if (/노년/.test(value)) return '노인'; if (/청년/.test(value)) return '청년'; return '복지'; };
 
 export type ImportedPolicy = { id: string; title: string; category: string; region: string; amount: string; deadline: string; summary: string; target: string[]; documents: string[]; applyUrl: string; keywords: string[]; sourceName: string; externalSourceId: string; ministry: string; department: string; contact: string; lifeCycles: string[]; themes: string[]; householdTypes: string[]; supportCycle: string; provisionType: string; onlineApplyAvailable: boolean | null; sourceRegisteredAt: string; viewCount: number | null; isActive: boolean; reviewStatus: string };
+export type WelfareDetail = { target: string[]; selectionCriteria: string; supportDetails: string; applicationMethod: string; additionalInfo: string; documents: string[] };
+
+function parseDetail(xml: string): WelfareDetail {
+  const target = tag(xml, ['tgtrDtlCn', 'sprtTrgtCn', 'trgterDtlCn', 'servTrgtCn']);
+  const selectionCriteria = tag(xml, ['slctCritCn', 'selectCritCn', 'slctCrtrCn']);
+  const supportDetails = tag(xml, ['alwServCn', 'sprtCn', 'servDtlCn', 'benefitCn']);
+  const applicationMethod = tag(xml, ['aplyMtdCn', 'applMthdCn', 'reqstMthdCn']);
+  const additionalInfo = [tag(xml, ['inqplCtadrArray', 'inqplCtadr', 'rprsCtadr']), tag(xml, ['addInfoArray', 'etcCn', 'refrnCn'])].filter(Boolean).join('\n');
+  const documentText = tag(xml, ['servSeCodeArray', 'aplyDocCn', 'submitDocCn', 'servFileArray']);
+  return { target: target ? [target] : [], selectionCriteria, supportDetails, applicationMethod, additionalInfo, documents: documentText ? documentText.split(/[,\n]/).map((item) => item.trim()).filter(Boolean) : [] };
+}
 
 function parsePolicy(xml: string): ImportedPolicy | null {
   const sourceId = tag(xml, ['servId', 'wlfareInfoId', 'serviceId']);
@@ -82,12 +93,53 @@ export async function syncCentralWelfare() {
   return { fetched: policies.length, created, changed, missing, unchanged, initialImport: allSourceRows.length === 0, source: '한국사회보장정보원 중앙부처복지서비스' };
 }
 
+export async function syncCentralWelfareDetails(limit = 90) {
+  if (!isDbEnabled()) throw new Error('DB 연결이 필요합니다.');
+  const rawKey = process.env.DATA_GO_KR_SERVICE_KEY || process.env.WELFARE_API_SERVICE_KEY;
+  if (!rawKey) throw new Error('DATA_GO_KR_SERVICE_KEY가 설정되지 않았습니다.');
+  const rows = await prisma.policy.findMany({ where: { id: { startsWith: 'bokjiro-' }, externalSourceId: { not: null } } });
+  const weight = (status: string) => status === 'FAILED' ? 0 : status === 'PENDING' ? 1 : status === 'NEED_REVIEW' ? 3 : 2;
+  const queue = rows.sort((a, b) => weight(a.detailStatus) - weight(b.detailStatus) || (a.detailCheckedAt?.getTime() || 0) - (b.detailCheckedAt?.getTime() || 0)).slice(0, Math.min(90, Math.max(1, limit)));
+  let completed = 0, unchanged = 0, changed = 0, failed = 0;
+  for (let offset = 0; offset < queue.length; offset += 10) {
+    const batch = queue.slice(offset, offset + 10);
+    await Promise.all(batch.map(async (policy) => {
+      try {
+        const params = new URLSearchParams({ serviceKey: cleanKey(rawKey), callTp: 'D', servId: policy.externalSourceId! });
+        const response = await fetch(`${BASE_URL}/NationalWelfaredetailedV001?${params}`, { cache: 'no-store', headers: { 'User-Agent': 'PolicyMoney/1.0' }, signal: AbortSignal.timeout(8000) });
+        const xml = await response.text();
+        if (!response.ok || /SERVICE ERROR|APPLICATION_ERROR|인증키|resultCode>[^0<]/i.test(xml)) throw new Error(`HTTP ${response.status}`);
+        const detail = parseDetail(xml);
+        if (!detail.target.length && !detail.selectionCriteria && !detail.supportDetails && !detail.applicationMethod && !detail.additionalInfo) throw new Error('상세 응답 필드 없음');
+        const detailHash = hash(detail);
+        if (!policy.detailHash) {
+          await prisma.policy.update({ where: { id: policy.id }, data: { ...detail, target: detail.target.length ? detail.target : policy.target, documents: detail.documents.length ? detail.documents : policy.documents, amount: detail.supportDetails || policy.amount, detailHash, detailStatus: 'COMPLETE', detailCheckedAt: new Date(), detailRetryCount: 0 } });
+          completed++; return;
+        }
+        if (policy.detailHash === detailHash) {
+          await prisma.policy.update({ where: { id: policy.id }, data: { detailStatus: 'COMPLETE', detailCheckedAt: new Date(), detailRetryCount: 0 } });
+          unchanged++; return;
+        }
+        const pending = await prisma.policyCheck.findFirst({ where: { policyId: policy.id, sourceHash: detailHash, reviewerStatus: null }, select: { id: true } });
+        if (!pending) await prisma.policyCheck.create({ data: { policyId: policy.id, title: policy.title, officialUrl: policy.applyUrl, httpStatus: response.status, checkStatus: 'NEED_REVIEW', reasons: ['복지서비스 상세정보 변경 감지'], diffSummary: '지원 대상·선정 기준·지원 내용·신청 방법 중 변경된 내용이 있습니다.', sourceHash: detailHash, oldSnapshot: JSON.stringify({ target: policy.target, documents: policy.documents, selectionCriteria: policy.selectionCriteria, supportDetails: policy.supportDetails, applicationMethod: policy.applicationMethod, additionalInfo: policy.additionalInfo, detailHash: policy.detailHash }), newSnapshot: JSON.stringify({ kind: 'WELFARE_DETAIL_IMPORT', detail, detailHash }) } });
+        await prisma.policy.update({ where: { id: policy.id }, data: { detailStatus: 'NEED_REVIEW', detailCheckedAt: new Date() } });
+        changed++;
+      } catch {
+        await prisma.policy.update({ where: { id: policy.id }, data: { detailStatus: 'FAILED', detailCheckedAt: new Date(), detailRetryCount: { increment: 1 } } });
+        failed++;
+      }
+    }));
+  }
+  return { requested: queue.length, completed, unchanged, changed, failed, remaining: Math.max(0, rows.filter((row) => row.detailStatus !== 'COMPLETE').length - completed) };
+}
+
 export function pendingChangeFromSnapshot(snapshot: string | null) {
   if (!snapshot) return null;
   try {
     const parsed = JSON.parse(snapshot);
     if (parsed?.kind === 'WELFARE_API_IMPORT' && parsed.policy) return { kind: 'IMPORT' as const, policy: parsed.policy as ImportedPolicy };
     if (parsed?.kind === 'WELFARE_API_MISSING' && parsed.policyId) return { kind: 'MISSING' as const, policyId: String(parsed.policyId) };
+    if (parsed?.kind === 'WELFARE_DETAIL_IMPORT' && parsed.detail && parsed.detailHash) return { kind: 'DETAIL' as const, detail: parsed.detail as WelfareDetail, detailHash: String(parsed.detailHash) };
     return null;
   } catch { return null; }
 }

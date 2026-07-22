@@ -30,6 +30,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         ? { ...pendingChange.policy, isActive: true, reviewStatus: 'APPROVED', lastCheckedAt: new Date() }
         : pendingChange?.kind === 'MISSING'
           ? { isActive: false, reviewStatus: 'EXPIRED', lastCheckedAt: new Date() }
+          : pendingChange?.kind === 'DETAIL'
+            ? { ...pendingChange.detail, detailHash: pendingChange.detailHash, detailStatus: 'COMPLETE', detailCheckedAt: new Date(), detailRetryCount: 0, reviewStatus: 'APPROVED' }
           : { reviewStatus: reviewerStatus }
     })
   ]);
