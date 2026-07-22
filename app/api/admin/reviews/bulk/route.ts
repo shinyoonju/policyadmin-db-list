@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isDbEnabled, prisma } from '@/lib/prisma';
-import { pendingPolicyFromSnapshot } from '@/lib/welfare-sync';
+import { pendingChangeFromSnapshot } from '@/lib/welfare-sync';
 
 export async function PATCH(request: Request) {
   if (!isDbEnabled()) return NextResponse.json({ message: 'DB 연결이 필요합니다.' }, { status: 503 });
@@ -26,8 +26,8 @@ export async function PATCH(request: Request) {
       data: { reviewerStatus: 'APPROVED', reviewedAt: now }
     });
     for (const check of checks) {
-      const importedPolicy = pendingPolicyFromSnapshot(check.newSnapshot);
-      await tx.policy.update({ where: { id: check.policyId }, data: importedPolicy ? { ...importedPolicy, isActive: true, reviewStatus: 'APPROVED', lastCheckedAt: now } : { reviewStatus: 'APPROVED' } });
+      const pendingChange = pendingChangeFromSnapshot(check.newSnapshot);
+      await tx.policy.update({ where: { id: check.policyId }, data: pendingChange?.kind === 'IMPORT' ? { ...pendingChange.policy, isActive: true, reviewStatus: 'APPROVED', lastCheckedAt: now } : pendingChange?.kind === 'MISSING' ? { isActive: false, reviewStatus: 'EXPIRED', lastCheckedAt: now } : { reviewStatus: 'APPROVED' } });
     }
   });
 

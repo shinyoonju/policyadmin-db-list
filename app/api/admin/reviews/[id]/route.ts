@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isDbEnabled, prisma } from '@/lib/prisma';
-import { pendingPolicyFromSnapshot } from '@/lib/welfare-sync';
+import { pendingChangeFromSnapshot } from '@/lib/welfare-sync';
 
 const allowedStatuses = new Set(['APPROVED', 'NEEDS_CHANGES']);
 
@@ -18,7 +18,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const check = await prisma.policyCheck.findUnique({ where: { id: params.id } });
   if (!check) return NextResponse.json({ message: '검수 기록을 찾을 수 없습니다.' }, { status: 404 });
 
-  const importedPolicy = reviewerStatus === 'APPROVED' ? pendingPolicyFromSnapshot(check.newSnapshot) : null;
+  const pendingChange = reviewerStatus === 'APPROVED' ? pendingChangeFromSnapshot(check.newSnapshot) : null;
   await prisma.$transaction([
     prisma.policyCheck.update({
       where: { id: params.id },
@@ -26,9 +26,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }),
     prisma.policy.update({
       where: { id: check.policyId },
-      data: importedPolicy
-        ? { ...importedPolicy, isActive: true, reviewStatus: 'APPROVED', lastCheckedAt: new Date() }
-        : { reviewStatus: reviewerStatus }
+      data: pendingChange?.kind === 'IMPORT'
+        ? { ...pendingChange.policy, isActive: true, reviewStatus: 'APPROVED', lastCheckedAt: new Date() }
+        : pendingChange?.kind === 'MISSING'
+          ? { isActive: false, reviewStatus: 'EXPIRED', lastCheckedAt: new Date() }
+          : { reviewStatus: reviewerStatus }
     })
   ]);
 

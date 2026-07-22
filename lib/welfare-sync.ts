@@ -35,9 +35,11 @@ export async function syncCentralWelfare() {
   const policies = blocks(xml).map(parsePolicy).filter((item): item is ImportedPolicy => Boolean(item));
   if (!policies.length) throw new Error('API 응답에서 복지서비스 목록을 찾지 못했습니다. 인증키 유형과 API 승인을 확인하세요.');
   const ids = policies.map((item) => item.id);
-  const [existingRows, pendingRows] = await Promise.all([
+  const syncStartedAt = new Date();
+  const [existingRows, pendingRows, allSourceRows] = await Promise.all([
     prisma.policy.findMany({ where: { id: { in: ids } } }),
-    prisma.policyCheck.findMany({ where: { policyId: { in: ids }, reviewerStatus: null, sourceHash: { not: null } }, select: { policyId: true, sourceHash: true } })
+    prisma.policyCheck.findMany({ where: { reviewerStatus: null, sourceHash: { not: null } }, select: { policyId: true, sourceHash: true } }),
+    prisma.policy.findMany({ where: { id: { startsWith: 'bokjiro-' } } })
   ]);
   const existingMap = new Map(existingRows.map((item) => [item.id, item]));
   const pendingKeys = new Set(pendingRows.map((item) => `${item.policyId}:${item.sourceHash}`));
@@ -52,16 +54,32 @@ export async function syncCentralWelfare() {
     if (!existing) { newPolicies.push(incoming); created++; } else changed++;
     checks.push({ policyId: incoming.id, title: incoming.title, officialUrl: incoming.applyUrl, httpStatus: response.status, checkStatus: 'NEED_REVIEW', reasons: [existing ? '공공 API에서 정책 변경 감지' : '공공 API에서 신규 정책 수집'], diffSummary: existing ? '복지로 API 정보가 기존 정책과 다릅니다.' : '복지로 API 신규 정책입니다.', sourceHash: incomingHash, oldSnapshot: existing ? JSON.stringify(comparable(existing)) : null, newSnapshot: JSON.stringify({ kind: 'WELFARE_API_IMPORT', policy: incoming }) });
   }
-  const now = new Date();
+  let missing = 0;
+  if (policies.length >= 100) {
+    const fetchedIds = new Set(ids);
+    for (const previous of allSourceRows) {
+      if (fetchedIds.has(previous.id)) continue;
+      const missingHash = `missing:${hash(previous.id)}`;
+      if (pendingKeys.has(`${previous.id}:${missingHash}`)) continue;
+      checks.push({ policyId: previous.id, title: previous.title, officialUrl: previous.applyUrl, httpStatus: response.status, checkStatus: 'NEED_REVIEW', reasons: ['공공 API 최신 목록에서 정책이 조회되지 않음'], diffSummary: '삭제 또는 종료 가능성이 있습니다. 승인하면 사이트에서 비공개 처리됩니다.', sourceHash: missingHash, oldSnapshot: JSON.stringify(comparable(previous)), newSnapshot: JSON.stringify({ kind: 'WELFARE_API_MISSING', policyId: previous.id }) });
+      missing++;
+    }
+  }
+  const now = syncStartedAt;
   await prisma.$transaction([
     prisma.policy.updateMany({ where: { id: { in: ids } }, data: { lastCheckedAt: now } }),
-    prisma.policy.createMany({ data: newPolicies, skipDuplicates: true }),
+    prisma.policy.createMany({ data: newPolicies.map((policy) => ({ ...policy, lastCheckedAt: now })), skipDuplicates: true }),
     prisma.policyCheck.createMany({ data: checks })
   ]);
-  return { fetched: policies.length, created, changed, unchanged, source: '한국사회보장정보원 중앙부처복지서비스' };
+  return { fetched: policies.length, created, changed, missing, unchanged, initialImport: allSourceRows.length === 0, source: '한국사회보장정보원 중앙부처복지서비스' };
 }
 
-export function pendingPolicyFromSnapshot(snapshot: string | null) {
+export function pendingChangeFromSnapshot(snapshot: string | null) {
   if (!snapshot) return null;
-  try { const parsed = JSON.parse(snapshot); return parsed?.kind === 'WELFARE_API_IMPORT' && parsed.policy ? parsed.policy as ImportedPolicy : null; } catch { return null; }
+  try {
+    const parsed = JSON.parse(snapshot);
+    if (parsed?.kind === 'WELFARE_API_IMPORT' && parsed.policy) return { kind: 'IMPORT' as const, policy: parsed.policy as ImportedPolicy };
+    if (parsed?.kind === 'WELFARE_API_MISSING' && parsed.policyId) return { kind: 'MISSING' as const, policyId: String(parsed.policyId) };
+    return null;
+  } catch { return null; }
 }
