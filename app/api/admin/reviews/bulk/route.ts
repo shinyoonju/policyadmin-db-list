@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isDbEnabled, prisma } from '@/lib/prisma';
+import { pendingPolicyFromSnapshot } from '@/lib/welfare-sync';
 
 export async function PATCH(request: Request) {
   if (!isDbEnabled()) return NextResponse.json({ message: 'DB 연결이 필요합니다.' }, { status: 503 });
@@ -14,22 +15,21 @@ export async function PATCH(request: Request) {
 
   const checks = await prisma.policyCheck.findMany({
     where: { id: { in: ids } },
-    select: { id: true, policyId: true }
+    select: { id: true, policyId: true, newSnapshot: true }
   });
   if (!checks.length) return NextResponse.json({ message: '검수 기록을 찾을 수 없습니다.' }, { status: 404 });
 
-  const policyIds = Array.from(new Set(checks.map((item) => item.policyId)));
   const now = new Date();
-  await prisma.$transaction([
-    prisma.policyCheck.updateMany({
+  await prisma.$transaction(async (tx) => {
+    await tx.policyCheck.updateMany({
       where: { id: { in: checks.map((item) => item.id) } },
       data: { reviewerStatus: 'APPROVED', reviewedAt: now }
-    }),
-    prisma.policy.updateMany({
-      where: { id: { in: policyIds } },
-      data: { reviewStatus: 'APPROVED' }
-    })
-  ]);
+    });
+    for (const check of checks) {
+      const importedPolicy = pendingPolicyFromSnapshot(check.newSnapshot);
+      await tx.policy.update({ where: { id: check.policyId }, data: importedPolicy ? { ...importedPolicy, isActive: true, reviewStatus: 'APPROVED', lastCheckedAt: now } : { reviewStatus: 'APPROVED' } });
+    }
+  });
 
   return NextResponse.json({ success: true, updatedCount: checks.length });
 }

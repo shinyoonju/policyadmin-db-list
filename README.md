@@ -32,6 +32,16 @@ DB 연결 전에는 샘플 데이터 조회만 되고, 등록/수정/삭제는 D
 2. Project Settings > Database > Connection string 확인
 3. `.env.example`을 복사해서 `.env.local` 생성
 4. `DATABASE_URL`에는 Transaction pooler 주소 입력
+5. 공공데이터포털 중앙부처복지서비스 인증키는 `DATA_GO_KR_SERVICE_KEY`에 Decoding 키로 입력
+
+## 중앙부처 복지서비스 자동 수집
+
+- 관리자 검수 화면에서 `복지로 정책 API 수집` 버튼을 누르면 최대 500건을 조회합니다.
+- 신규 정책은 비공개·검수 대기로 저장됩니다.
+- 변경이 없는 정책은 중복 저장하지 않고 마지막 확인 시각만 갱신합니다.
+- 변경된 정책은 기존 공개 내용을 유지하고 검수 항목만 생성합니다.
+- 관리자가 승인한 뒤에만 신규·변경 내용이 공개됩니다.
+- 매일 오전 9시 Vercel Cron 실행 시에도 API 동기화를 함께 수행합니다.
 5. `DIRECT_URL`에는 Direct connection 주소 입력
 6. 아래 명령어 실행
 

@@ -3,6 +3,7 @@ import { createHash } from 'crypto';
 import { policies as samplePolicies } from '@/data/policies';
 import { appendLog, PolicyCheckLog, readLogs } from '@/lib/logger';
 import { prisma, isDbEnabled } from '@/lib/prisma';
+import { syncCentralWelfare } from '@/lib/welfare-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,6 +101,18 @@ export async function GET(request: Request) {
 
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+  }
+
+  let welfareSync: Awaited<ReturnType<typeof syncCentralWelfare>> | { skipped: true; reason: string } = {
+    skipped: true,
+    reason: 'DATA_GO_KR_SERVICE_KEY가 설정되지 않았습니다.'
+  };
+  if (isDbEnabled() && (process.env.DATA_GO_KR_SERVICE_KEY || process.env.WELFARE_API_SERVICE_KEY)) {
+    try {
+      welfareSync = await syncCentralWelfare();
+    } catch (error) {
+      welfareSync = { skipped: true, reason: error instanceof Error ? error.message : '복지 API 수집 실패' };
+    }
   }
 
   const checkedAt = new Date().toISOString();
@@ -201,6 +214,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     success: true,
+    welfareSync,
     dbEnabled: isDbEnabled(),
     checkedCount: results.length,
     needReviewCount: results.filter((item) => item.checkStatus === 'NEED_REVIEW').length,

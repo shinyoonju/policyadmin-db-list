@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { MenuClickLog, PolicyCheckLog, readLogs, SearchLog } from '@/lib/logger';
 import { isDbEnabled, prisma } from '@/lib/prisma';
 import { ReviewTable } from '@/components/ReviewTable';
+import { WelfareSyncButton } from '@/components/WelfareSyncButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,6 +78,7 @@ export default async function AdminReviewsPage() {
             : <>현재 샘플 모드이며 <code className="rounded bg-soft px-1">.logs</code> 폴더의 개발용 기록을 표시합니다.</>}
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
+          <WelfareSyncButton />
           <a href="/api/cron/verify-policies" target="_blank" className="rounded-2xl bg-brand px-5 py-3 text-sm font-bold text-white">
             정책 검수 API 실행
           </a>
