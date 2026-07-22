@@ -25,14 +25,17 @@ export async function listPublicPolicies() {
     supportCycle: row.supportCycle,
     provisionType: row.provisionType,
     onlineApplyAvailable: row.onlineApplyAvailable,
-    sourceName: row.sourceName
+    sourceName: row.sourceName,
+    externalSourceId: row.externalSourceId,
+    sourceRegisteredAt: row.sourceRegisteredAt,
+    viewCount: row.viewCount
   }));
 }
 
 export async function getPublicPolicyById(id: string) {
   if (!isDbEnabled()) {
     const policy = samplePolicies.find((item) => item.id === id);
-    return policy ? { ...policy, ministry: null, department: null, contact: null, lifeCycles: [], themes: [], householdTypes: [], supportCycle: null, provisionType: null, onlineApplyAvailable: null, sourceName: null } : null;
+    return policy ? { ...policy, ministry: null, department: null, contact: null, lifeCycles: [], themes: [], householdTypes: [], supportCycle: null, provisionType: null, onlineApplyAvailable: null, sourceName: null, externalSourceId: null, sourceRegisteredAt: null, viewCount: null } : null;
   }
   const row = await prisma.policy.findFirst({ where: { id, isActive: true } });
   if (!row) return null;
@@ -57,6 +60,9 @@ export async function getPublicPolicyById(id: string) {
     supportCycle: row.supportCycle,
     provisionType: row.provisionType,
     onlineApplyAvailable: row.onlineApplyAvailable,
-    sourceName: row.sourceName
+    sourceName: row.sourceName,
+    externalSourceId: row.externalSourceId,
+    sourceRegisteredAt: row.sourceRegisteredAt,
+    viewCount: row.viewCount
   };
 }
